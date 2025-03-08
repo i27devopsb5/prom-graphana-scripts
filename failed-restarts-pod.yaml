@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faulty-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: faulty-app
+  template:
+    metadata:
+      labels:
+        app: faulty-app
+    spec:
+      containers:
+      - name: faulty-container
+        image: busybox
+        args:
+        - /bin/sh
+        - -c
+        - "exit 1" # Forces the container to exit immediately
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: liveness-probe-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-probe-app
+  template:
+    metadata:
+      labels:
+        app: liveness-probe-app
+    spec:
+      containers:
+      - name: liveness-probe-container
+        image: busybox
+        args:
+        - /bin/sh
+        - -c
+        - "sleep 30"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: memory-hog
+spec:
+  containers:
+  - name: memory-hog-container
+    image: busybox
+    resources:
+      limits:
+        memory: "64Mi" # Set a very low memory limit
+    args:
+    - /bin/sh
+    - -c
+    - "while true; do dd if=/dev/urandom of=/dev/null bs=1M count=128; done"
